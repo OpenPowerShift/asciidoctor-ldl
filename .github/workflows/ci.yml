@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Ruby ${{ matrix.ruby }} / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Prove the "works on older Rubies" claim, plus a current release.
+        ruby: ['2.7', '3.0', '3.3']
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install JS test dependencies (LDL package + resvg)
+        working-directory: test/js
+        run: npm install --no-audit --no-fund
+
+      - name: Ruby tests
+        env:
+          LDL_PACKAGE_DIR: ${{ github.workspace }}/test/js
+        run: bundle exec rake test
+
+      - name: Node helper tests
+        working-directory: test/js
+        run: npm test

@@ -1,0 +1,9 @@
+// A minimal SEL-style trip: overcurrent, not blocked, or a manual earth trip.
+O1.Name = "Trip"
+I1.Name = "Overcurrent"
+I2.Name = "Block"
+I3.Name = "Earth"
+I4.Name = "Manual"
+
+O1 = I1 AND NOT I2
+     OR (I3 AND I4)

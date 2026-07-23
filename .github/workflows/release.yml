@@ -1,0 +1,49 @@
+name: Release
+
+# Publishes the gem to RubyGems using Trusted Publishing (OIDC) — no long-lived
+# API key is stored in the repository. Configure the trusted publisher once at
+# https://rubygems.org/gems/asciidoctor-ldl/trusted_publishers to match this
+# workflow (repository + workflow filename + environment).
+#
+# Cut a release by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create the GitHub release
+  id-token: write   # mint the OIDC token for trusted publishing
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      # Runs the tests before anything is published.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install JS test dependencies
+        working-directory: test/js
+        run: npm install --no-audit --no-fund
+      - name: Test
+        env:
+          LDL_PACKAGE_DIR: ${{ github.workspace }}/test/js
+        run: bundle exec rake test
+
+      # Builds, pushes to RubyGems via trusted publishing, and creates a
+      # matching GitHub release with the built gem attached.
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@v1

@@ -1,0 +1,365 @@
+= asciidoctor-ldl
+:idprefix:
+:idseparator: -
+:source-language: asciidoc
+:ldl-url: https://github.com/OpenPowerShift/logic-diagram-language
+:npm-url: https://www.npmjs.com/package/@openpowershift/logic-diagram-language
+:toc: macro
+:toclevels: 3
+
+An https://asciidoctor.org[Asciidoctor] extension that renders *logic and
+protection-relay diagrams* written in the {ldl-url}[Logic Diagram Language (LDL)]
+into *SVG* or *PNG* at conversion time, driven by AsciiDoc attributes.
+
+You write boolean equations in an AsciiDoc block; the extension renders a clean,
+laid-out diagram and embeds it as an image — no manual placement, no separate
+build step.
+
+[source]
+----
+[ldl]
+....
+TRIP.Name = "Trip"
+TRIP = OVERCURRENT AND NOT BLOCK
+       OR (EARTH AND MANUAL)
+....
+----
+
+toc::[]
+
+== How it works
+
+Rendering is delegated to the official {npm-url}[`@openpowershift/logic-diagram-language`]
+npm package (the same renderer used by the
+{ldl-url}[LDL playground]). The gem ships a tiny Node helper that imports the
+package and returns the rendered artifact; the Ruby side handles attributes,
+output paths and caching.
+
+* *SVG* output is produced by the LDL renderer directly (isomorphic — pure
+  Node). It needs only Node and the npm package. Being vector, it embeds
+  cleanly in `asciidoctor-pdf`, scales without loss, and stays small.
+* *PNG* output additionally rasterises the SVG with
+  https://github.com/thx/resvg-js[`@resvg/resvg-js`] — a single prebuilt,
+  dependency-free native module (no system libraries such as ImageMagick,
+  Cairo or a headless browser required).
+
+The dependency footprint is deliberately small: *Ruby*, *Node*, and the *LDL npm
+package* (plus `@resvg/resvg-js` only if you want PNG).
+
+== Prerequisites
+
+* Ruby (works on older versions — 2.5+) with Asciidoctor 2.0+.
+* https://nodejs.org[Node.js] 20 or newer, on `PATH`.
+* The LDL npm package, installed where you build your documents:
++
+[source,console]
+----
+$ npm install @openpowershift/logic-diagram-language
+$ npm install @resvg/resvg-js          # only needed for PNG output
+----
+
+The extension resolves the npm package from your project's `node_modules`
+(your build directory), or from a location you point it at with the
+`ldl-package-dir` attribute or the `LDL_PACKAGE_DIR` environment variable.
+
+== Installation
+
+Add the gem to your `Gemfile`:
+
+[source,ruby]
+----
+gem 'asciidoctor-ldl'
+----
+
+or install it directly:
+
+[source,console]
+----
+$ gem install asciidoctor-ldl
+----
+
+== Registering the extension
+
+On the command line, require it when converting:
+
+[source,console]
+----
+$ asciidoctor -r asciidoctor-ldl document.adoc
+$ asciidoctor-pdf -r asciidoctor-ldl document.adoc
+----
+
+From Ruby, requiring the gem auto-registers it with the global registry:
+
+[source,ruby]
+----
+require 'asciidoctor'
+require 'asciidoctor-ldl'
+
+Asciidoctor.convert_file 'document.adoc', safe: :safe
+----
+
+To register against a specific registry instead of globally:
+
+[source,ruby]
+----
+registry = Asciidoctor::Extensions.create
+Asciidoctor::Ldl.register(registry)
+----
+
+== Usage
+
+=== Inline block
+
+Put LDL source in a block named `ldl`. Use a literal (`....`) delimiter so LDL's
+own punctuation is never interpreted as AsciiDoc:
+
+[source]
+----
+[ldl]
+....
+O1.Name = "Trip"
+I1.Name = "Overcurrent"
+O1 = I1 AND NOT I2
+....
+----
+
+Optional positional attributes are `target` (a stable output file name) and
+`format`:
+
+[source]
+----
+[ldl,trip-logic,svg]
+....
+O1 = I1 AND NOT I2
+....
+----
+
+=== From a file
+
+Use the `ldl::` block macro to render an external `.ldl` file (path relative to
+the document):
+
+[source]
+----
+ldl::diagrams/trip-matrix.ldl[format=png,scale=2]
+----
+
+== Attributes
+
+Every option can be set on the individual block/macro, or document-wide using
+the `ldl-` prefixed form (block/macro wins). Set document attributes in the
+header or on the command line (`-a ldl-format=png`).
+
+[cols="1m,1m,1,3",options="header"]
+|===
+| Block attribute | Document attribute | Default | Description
+
+| format
+| ldl-format
+| `svg`
+| Output format: `svg` or `png`.
+
+| scale
+| ldl-scale
+| `1`
+| Scale multiplier. For `svg`, sets explicit `width`/`height` from the diagram's
+  intrinsic size (the `viewBox` is preserved, so it still scales crisply). For
+  `png`, multiplies the rasterised device pixels.
+
+| theme
+| ldl-theme
+| `light`
+| Colour theme: `light` or `dark`.
+
+| show-ids
+| ldl-show-ids
+| `false`
+| Draw bare identifiers (e.g. `I1`, `AND#G1`) instead of / in addition to labels.
+
+| show-labels
+| ldl-show-labels
+| `true`
+| Draw `.Name`/`.Description` labels.
+
+| target
+| —
+| _(hash)_
+| Output file basename (without extension). When omitted, a content-addressed
+  name (`ldl-<hash>.<ext>`) is used so identical diagrams share a file.
+
+| _(n/a)_
+| ldl-node
+| `node`
+| Path to the Node executable.
+
+| _(n/a)_
+| ldl-package-dir
+| _(auto)_
+| Directory from which to resolve the LDL npm package (and `@resvg/resvg-js`).
+  Overrides auto-detection; the `LDL_PACKAGE_DIR` env var does the same.
+
+| _(n/a)_
+| ldl-cache
+| `true`
+| Set to `false` to always re-render, ignoring the cache.
+|===
+
+Standard image attributes — `alt`, `title`, `width`, `height`, `align`,
+`float`, `id`, `link`, `role` — pass straight through to the generated image.
+
+TIP: Most *diagram* styling (inversion bubbles vs NOT gates, input bars,
+compactness, stroke width, margins, …) is authored in the LDL source itself with
+`OPTION` lines — see the {ldl-url}[LDL documentation]. This extension only
+surfaces the render-time view options above.
+
+=== Language `OPTION` lines vs. attributes
+
+The LDL source can carry its own `OPTION` lines; the extension honours them and
+then applies the attribute-driven overrides (`theme`, `show-ids`,
+`show-labels`) on top. For example:
+
+[source]
+----
+[ldl,theme=dark]
+....
+OPTION INVERSION = BUBBLES
+OPTION MARGIN = 16
+O1 = I1 AND NOT I2
+....
+----
+
+== Output formats
+
+Choosing a format:
+
+[cols="1m,4",options="header"]
+|===
+| Format | When to use
+
+| svg
+| *Default and recommended for `asciidoctor-pdf`.* Vector, so it is sharp at any
+  zoom or print resolution, embeds via `prawn-svg` with no rasterisation, and
+  compresses to a fraction of an equivalent PNG. Also ideal for HTML.
+
+| png
+| When a raster image is required (e.g. a target that cannot embed SVG). Use
+  `scale` to control resolution — `scale=2` renders at 2× device pixels.
+  Requires `@resvg/resvg-js`.
+|===
+
+For `asciidoctor-pdf`, prefer `svg`: it keeps PDFs small and crisp. If you must
+raster for PDF, `png` with `scale=2` or higher gives good print quality at the
+cost of size.
+
+== Styling with roles
+
+Every generated image is tagged with roles so it can be targeted from CSS or an
+`asciidoctor-pdf` theme without touching each block:
+
+* `ldl` — on every LDL diagram.
+* `ldl-svg` / `ldl-png` — the output format.
+* `ldl-light` / `ldl-dark` — the theme.
+
+Any `role` you set on the block is preserved and appended.
+
+In HTML the roles appear as classes on the image block, so you can style them
+with CSS:
+
+[source,css]
+----
+.imageblock.ldl { margin-block: 1.5rem; }
+.imageblock.ldl img { max-width: 100%; }
+.imageblock.ldl-dark { background: #1b1b1f; padding: 0.5rem; border-radius: 6px; }
+----
+
+In `asciidoctor-pdf`, target the same roles from your theme (roles map to
+`role_<name>` keys). For example, to centre and pad LDL diagrams:
+
+[source,yaml]
+----
+role:
+  ldl:
+    align: center
+  ldl-dark:
+    background-color: '1B1B1F'
+----
+
+Because the roles are stable, a document-wide look needs no per-block markup.
+
+== Caching
+
+Rendered files are content-addressed and cached: the source plus the resolved
+options (format, scale, theme, label toggles, and the gem version) are hashed
+into a small sidecar (`<image>.ldlcache`). On the next build, an unchanged
+diagram is reused and Node is not invoked. Editing the diagram or changing an
+option transparently regenerates it. Disable with `-a ldl-cache=false`.
+
+Generated images are written to the usual Asciidoctor image output location —
+`imagesoutdir` if set, otherwise `imagesdir` under the output directory — so
+they interoperate with the rest of your image pipeline.
+
+== Error handling
+
+If a diagram fails to parse or render, the extension emits a visible error block
+(role `ldl-error`) with the message and logs a warning, rather than aborting the
+whole conversion. This keeps a single broken diagram from failing a large book.
+
+== Example document
+
+[source]
+----
+= Protection Scheme
+:ldl-format: svg
+:ldl-theme: light
+:imagesdir: images
+
+== Transformer trip
+
+[ldl,xfmr-trip]
+....
+TRIP.Name = "Transformer trip"
+DIFF.Name = "Differential (87T)"
+OC.Name   = "Overcurrent (50/51)"
+BUCH.Name = "Buchholz (63)"
+TRIP = DIFF OR OC OR BUCH
+....
+
+== SEL-style seal-in (from a file)
+
+ldl::diagrams/seal-in.ldl[]
+----
+
+Convert to HTML and PDF:
+
+[source,console]
+----
+$ asciidoctor      -r asciidoctor-ldl protection-scheme.adoc
+$ asciidoctor-pdf  -r asciidoctor-ldl protection-scheme.adoc
+----
+
+== Development
+
+[source,console]
+----
+$ bundle install
+$ (cd test/js && npm install)     # LDL package + resvg for the test suite
+$ bundle exec rake test           # Ruby unit + end-to-end tests
+$ bundle exec rake jstest         # Node helper tests
+----
+
+The Ruby end-to-end tests convert real AsciiDoc through Asciidoctor and assert on
+the generated files, roles and markup. They resolve the npm package from
+`test/js` (or `LDL_PACKAGE_DIR`) and skip cleanly if Node or the package is
+unavailable.
+
+== Releasing
+
+Releases publish to RubyGems via https://guides.rubygems.org/trusted-publishing/[Trusted
+Publishing] (OIDC) — no API key is stored in the repository. Push a version tag
+(`git tag v0.1.0 && git push origin v0.1.0`) and the `Release` workflow builds,
+tests and publishes the gem. Configure the trusted publisher once on RubyGems to
+match `.github/workflows/release.yml`.
+
+== License
+
+MIT © Daniel Mulholland. See link:LICENSE[].
