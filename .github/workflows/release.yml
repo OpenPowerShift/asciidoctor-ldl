@@ -45,8 +45,12 @@ jobs:
 
       # Builds and pushes the gem to RubyGems via trusted publishing (with
       # attestations). Does not create a GitHub Release — that is the next step.
+      # await-release is disabled: the post-push index-propagation poll can lag
+      # past its timeout and fail the job even though the gem published fine.
       - name: Publish to RubyGems
         uses: rubygems/release-gem@v1
+        with:
+          await-release: false
 
       # Publish a matching GitHub Release with auto-generated notes and the
       # built gem attached.
