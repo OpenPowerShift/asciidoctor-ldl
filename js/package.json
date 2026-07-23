@@ -1,6 +1,6 @@
 {
   "name": "@openpowershift/asciidoctor-ldl",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Asciidoctor.js extension rendering OpenPowerShift LDL logic diagrams to SVG/PNG",
   "keywords": [
     "asciidoctor",

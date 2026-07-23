@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-23
+
+### Changed
+
+- First release published from CI via trusted publishing for **both** the gem
+  (RubyGems) and the npm package. No functional changes since 0.2.0 (which was
+  the initial, manually published npm release; the gem's first release carrying
+  the 0.2.0 changes is this one).
+- The npm release workflow now skips publishing a version already on the
+  registry, so a re-triggered tag still attaches release assets without failing.
+
 ## [0.2.0] - 2026-07-23
 
 ### Added
@@ -72,7 +83,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Content-addressed caching with a digest sidecar so unchanged diagrams are not
   re-rendered.
 
-[Unreleased]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.0...v0.1.1
