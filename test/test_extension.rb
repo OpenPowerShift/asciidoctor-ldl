@@ -89,13 +89,19 @@ class ExtensionTest < Minitest::Test
   end
 
   def test_invalid_source_produces_error_block_not_crash
-    html, _images = convert(<<~ADOC)
-      [ldl]
-      ----
-      O1 = = AND
-      ----
-    ADOC
+    html = nil
+    # The extension warns to stderr on a bad diagram (desirable in real use);
+    # capture it here so the deliberate failure does not clutter test output.
+    _out, err = capture_io do
+      html, = convert(<<~ADOC)
+        [ldl]
+        ----
+        O1 = = AND
+        ----
+      ADOC
+    end
     assert_match(/ldl-error/, html)
     assert_match(/LDL diagram error/, html)
+    assert_match(/parse error/i, err)
   end
 end
