@@ -46,6 +46,21 @@ test('honours the dark theme flag', () => {
   assert.notEqual(readFileSync(light, 'utf8'), readFileSync(dark, 'utf8'));
 });
 
+test('--font-family rewrites the generic sans-serif family', () => {
+  const out = tmpOut('svg');
+  const r = run(['--format', 'svg', '--font-family', 'DejaVu Sans, sans-serif', '--out', out], 'O1 = I1 AND I2');
+  assert.equal(r.status, 0, r.stderr.toString());
+  const svg = readFileSync(out, 'utf8');
+  assert.match(svg, /font-family="DejaVu Sans, sans-serif"/);
+  assert.doesNotMatch(svg, /font-family="sans-serif"/);
+});
+
+test('without --font-family the family is left untouched', () => {
+  const out = tmpOut('svg');
+  run(['--format', 'svg', '--out', out], 'O1 = I1 AND I2');
+  assert.match(readFileSync(out, 'utf8'), /font-family="sans-serif"/);
+});
+
 test('reports parse errors and exits non-zero', () => {
   const out = tmpOut('svg');
   const r = run(['--format', 'svg', '--out', out], 'O1 = = AND');

@@ -35,6 +35,7 @@ module Asciidoctor
           theme: attr(attrs, doc, 'theme', 'ldl-theme', 'light'),
           show_ids: attr(attrs, doc, 'show-ids', 'ldl-show-ids', nil),
           show_labels: attr(attrs, doc, 'show-labels', 'ldl-show-labels', nil),
+          font_family: attr(attrs, doc, 'font-family', 'ldl-font-family', nil),
           node: doc.attr('ldl-node', 'node'),
           package_dir: doc.attr('ldl-package-dir') || doc.attr('ldl-node-modules'),
           out_dir: image_output_dir(doc),

@@ -181,6 +181,13 @@ header or on the command line (`-a ldl-format=png`).
 | `true`
 | Draw `.Name`/`.Description` labels.
 
+| font-family
+| ldl-font-family
+| _(see below)_
+| Font family for diagram text. Defaults to a cross-platform stack
+  (`DejaVu Sans, Bitstream Vera Sans, Liberation Sans, Arial, sans-serif`). Set
+  to `sans-serif` (or `none`) to keep the renderer's plain generic family.
+
 | target
 | —
 | _(hash)_
@@ -260,6 +267,29 @@ Choosing a format:
 For `asciidoctor-pdf`, prefer `svg`: it keeps PDFs small and crisp. If you must
 raster for PDF, `png` with `scale=2` or higher gives good print quality at the
 cost of size.
+
+=== Fonts (asciidoctor-pdf)
+
+Gate and comparator symbols use `−` (U+2212) and `≥` (U+2265). In
+`asciidoctor-pdf`, `prawn-svg` maps the generic `sans-serif` family to the
+built-in Helvetica, which lacks those glyphs — so by default this extension
+names real fonts first (see `font-family` above). For them to take effect in a
+PDF, *register a matching font in your theme* and it will be used automatically:
+
+[source,yaml]
+----
+# in your -theme.yml (font files under a directory on :pdf-fontsdir:)
+font:
+  catalog:
+    merge: true
+    DejaVu Sans:
+      normal: DejaVuSans.ttf
+      bold: DejaVuSans-Bold.ttf
+      italic: DejaVuSans-Oblique.ttf
+      bold_italic: DejaVuSans-BoldOblique.ttf
+----
+
+HTML and PNG output already resolve the glyphs without any setup.
 
 == Styling with roles
 

@@ -6,6 +6,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-23
+
+### Added
+
+- `font-family` / `ldl-font-family` attribute controlling the font used for
+  diagram text, and a cross-platform default
+  (`DejaVu Sans, Bitstream Vera Sans, Liberation Sans, Arial, sans-serif`).
+
+### Fixed
+
+- Gate/comparator glyphs `−` (U+2212) and `≥` (U+2265) no longer disappear in
+  asciidoctor-pdf. The renderer's generic `sans-serif` was mapped by prawn-svg
+  to the built-in Helvetica, which lacks those glyphs; the new default names
+  real fonts first (register one — e.g. DejaVu Sans — in your PDF theme).
+
 ## [0.1.1] - 2026-07-23
 
 ### Added
@@ -31,6 +46,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Content-addressed caching with a digest sidecar so unchanged diagrams are not
   re-rendered.
 
-[Unreleased]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/OpenPowerShift/asciidoctor-ldl/releases/tag/v0.1.0

@@ -52,6 +52,27 @@ class RendererTest < Minitest::Test
     assert_equal 'keep.png', r.target_filename('x', 'keep.png') # ext not doubled
   end
 
+  def test_font_family_defaults_and_overrides
+    default = Asciidoctor::Ldl::Renderer.new
+    assert_includes default.command_for('/o.svg').join(' '), '--font-family'
+    ff = default.command_for('/o.svg')
+    assert_match(/DejaVu Sans/, ff[ff.index('--font-family') + 1])
+
+    custom = Asciidoctor::Ldl::Renderer.new(font_family: 'Fira Sans, sans-serif')
+    c = custom.command_for('/o.svg')
+    assert_equal 'Fira Sans, sans-serif', c[c.index('--font-family') + 1]
+
+    # An explicit generic disables the rewrite (no flag emitted).
+    off = Asciidoctor::Ldl::Renderer.new(font_family: 'sans-serif')
+    refute_includes off.command_for('/o.svg'), '--font-family'
+  end
+
+  def test_font_family_affects_cache_key
+    a = Asciidoctor::Ldl::Renderer.new(font_family: 'Foo')
+    b = Asciidoctor::Ldl::Renderer.new(font_family: 'Bar')
+    refute_equal a.target_filename('O1 = I1'), b.target_filename('O1 = I1')
+  end
+
   def test_command_for_includes_all_flags
     r = Asciidoctor::Ldl::Renderer.new(format: 'png', scale: 2, theme: 'dark',
                                        show_ids: true, show_labels: false,
