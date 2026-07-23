@@ -1,6 +1,7 @@
 /pkg/
 /tmp/
 /.bundle/
+/vendor/
 Gemfile.lock
 *.gem
 node_modules/

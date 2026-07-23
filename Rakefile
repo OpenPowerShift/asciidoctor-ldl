@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# Provides the `build`, `install` and `release` tasks. The `release` task is
+# what the rubygems/release-gem GitHub Action invokes for trusted publishing;
+# it detects the already-pushed tag and skips re-tagging, then pushes the gem.
+require 'bundler/gem_tasks'
 require 'rake/testtask'
 
 Rake::TestTask.new(:test) do |t|
