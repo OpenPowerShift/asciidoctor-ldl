@@ -35,6 +35,10 @@
       "types": "./dist/types/browser.d.ts",
       "default": "./dist/browser/index.js"
     },
+    "./standalone": {
+      "types": "./dist/types/node.d.ts",
+      "default": "./dist/standalone/asciidoctor-ldl.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

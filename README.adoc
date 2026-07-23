@@ -220,29 +220,41 @@ const html = await convert(source, { extension_registry: registry })
 
 The https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode[AsciiDoc]
 extension loads Asciidoctor.js extensions from `.asciidoctor/lib/**/*.js` in the
-workspace. Add a registration file that hands the registry to this extension:
+workspace: it `require`s each file and calls its `register(registry)`. Enable
+*Enable Asciidoctor.js extensions registration*
+(`asciidoc.extensions.registerWorkspaceExtensions`) and trust the workspace when
+prompted. Diagrams render as inline SVG in the preview (PNG is not available
+there).
 
-[source,js]
-.<workspace>/.asciidoctor/lib/ldl.js
-----
-const ldl = require('@openpowershift/asciidoctor-ldl')
-module.exports = function (registry) {
-  ldl.register(registry)
-  return registry
-}
-----
+*Option A — zero install (recommended).* Download
+`asciidoctor-ldl-standalone.js` from the
+https://github.com/OpenPowerShift/asciidoctor-ldl/releases[latest release] and
+save it as `<workspace>/.asciidoctor/lib/ldl.js`. It is a single self-contained
+file with the renderer bundled in — nothing to `npm install`, which is ideal
+when you cannot add packages. Reload the window; `[ldl]` blocks and `ldl::`
+macros render.
 
-Install the packages in the workspace so they resolve, then reload the window:
+*Option B — via npm.* Install into the workspace and point a loader file at the
+bundled *standalone* entry:
 
 [source,console]
 ----
 $ npm install @openpowershift/asciidoctor-ldl @openpowershift/logic-diagram-language
-$ npm install @resvg/resvg-js        # for PNG previews
 ----
 
-`[ldl]` blocks and `ldl::` macros then render in the live preview. This needs a
-build of Asciidoctor.js that supports asynchronous extensions (Asciidoctor.js 4);
-older bundled versions may not render the diagrams.
+[source,js]
+.<workspace>/.asciidoctor/lib/ldl.js
+----
+module.exports = require('@openpowershift/asciidoctor-ldl/standalone')
+----
+
+Use the `/standalone` subpath: it renders synchronously and inline, so it works
+regardless of which Asciidoctor.js version the editor bundles. (The default
+entry uses asynchronous rendering, which older bundled engines may not await.)
+
+NOTE: If your workspace `package.json` sets `"type": "module"`, also drop a
+`.asciidoctor/lib/package.json` containing `{ "type": "commonjs" }` so the `.js`
+loader file is treated as CommonJS.
 
 == Attributes
 

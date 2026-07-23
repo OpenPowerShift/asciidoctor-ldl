@@ -52,14 +52,13 @@ jobs:
         with:
           await-release: false
 
-      # Publish a matching GitHub Release with auto-generated notes and the
-      # built gem attached.
-      - name: Create GitHub Release
+      # Publish a matching GitHub Release with the built gem attached. Creation
+      # is idempotent (the parallel npm workflow may create it first), then the
+      # gem is uploaded as a release asset.
+      - name: Attach gem to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes \
-            pkg/*.gem
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" --generate-notes || true
+          gh release upload "${GITHUB_REF_NAME}" pkg/*.gem --clobber

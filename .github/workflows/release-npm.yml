@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # attach the standalone build to the GitHub Release
   id-token: write   # OIDC token for npm trusted publishing + provenance
 
 defaults:
@@ -45,3 +45,17 @@ jobs:
 
       - name: Publish to npm (provenance via OIDC)
         run: npm publish --provenance --access public
+
+      # Attach the packed npm tarball and the self-contained standalone build
+      # (renderer bundled in — drop into Asciidoctor VS Code's .asciidoctor/lib
+      # without installing anything) to the GitHub Release. Release creation is
+      # idempotent (the gem workflow may create it first).
+      - name: Attach npm tarball and standalone to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TARBALL="$(npm pack --silent)"
+          cp dist/standalone/asciidoctor-ldl.cjs asciidoctor-ldl-standalone.js
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" --generate-notes || true
+          gh release upload "${GITHUB_REF_NAME}" "$TARBALL" asciidoctor-ldl-standalone.js --clobber

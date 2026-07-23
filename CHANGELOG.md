@@ -20,6 +20,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the gem's Node helper and the npm extension, so Ruby and JavaScript produce
   **byte-identical** SVG and identical file names. A parity test suite asserts
   this across formats, scale, theme, labels and font options.
+- A **standalone single-file build** (`@openpowershift/asciidoctor-ldl/standalone`,
+  and attached to each GitHub release as `asciidoctor-ldl-standalone.js`) with
+  the renderer bundled in. It renders SVG inline and synchronously — drop it into
+  Asciidoctor VS Code's `.asciidoctor/lib` with no `npm install` required.
 
 ### Changed
 

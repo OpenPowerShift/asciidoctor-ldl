@@ -63,6 +63,19 @@ diagram inline. Your bundler/import map must provide the renderer.
 import ldl from '@openpowershift/asciidoctor-ldl/browser'
 ```
 
+## Standalone (Asciidoctor VS Code, zero install)
+
+For editors like Asciidoctor VS Code that load `.asciidoctor/lib/**/*.js`, a
+self-contained build bundles the renderer in and renders SVG inline and
+synchronously. No install needed — download `asciidoctor-ldl-standalone.js` from
+a [release](https://github.com/OpenPowerShift/asciidoctor-ldl/releases) and save
+it as `.asciidoctor/lib/ldl.js`. Or, if the package is installed:
+
+```js
+// .asciidoctor/lib/ldl.js
+module.exports = require('@openpowershift/asciidoctor-ldl/standalone')
+```
+
 ## Attributes
 
 `format` (`svg`|`png`), `scale`, `theme` (`light`|`dark`), `show-ids`,
