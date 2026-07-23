@@ -25,6 +25,15 @@ TRIP = OVERCURRENT AND NOT BLOCK
 ....
 ----
 
+It ships in two forms that share a single rendering core, so a diagram and its
+options produce *byte-identical output* either way:
+
+* a *Ruby gem*, `asciidoctor-ldl` (the default examples below), and
+* an *Asciidoctor.js extension*, `@openpowershift/asciidoctor-ldl` on npm — see
+  <<use-with-asciidoctor-js>>.
+
+Both accept the same <<attributes,attributes>> and emit the same roles.
+
 toc::[]
 
 == How it works
@@ -143,6 +152,97 @@ the document):
 ----
 ldl::diagrams/trip-matrix.ldl[format=png,scale=2]
 ----
+
+[[use-with-asciidoctor-js]]
+== Use with Asciidoctor.js
+
+The extension is also published to npm as `@openpowershift/asciidoctor-ldl`, for
+https://docs.asciidoctor.org/asciidoctor.js/latest/[Asciidoctor.js] 4. It shares
+the same rendering core as the gem, so the same diagram and options yield
+byte-identical SVG and the same generated file names. It ships as a single
+bundled file (Node ESM + CommonJS, plus a browser build) with TypeScript types.
+
+[source,console]
+----
+$ npm install @openpowershift/asciidoctor-ldl @openpowershift/logic-diagram-language
+$ npm install @resvg/resvg-js        # only needed for format=png
+----
+
+The renderer (`@openpowershift/logic-diagram-language`) is a runtime dependency;
+`@resvg/resvg-js` is optional and only used for PNG.
+
+=== Programmatic use (Node)
+
+Rendering is asynchronous, so `convert` returns a promise — always `await` it.
+
+[source,js]
+----
+import { Extensions, convert } from '@asciidoctor/core'
+import ldl from '@openpowershift/asciidoctor-ldl'
+
+const registry = Extensions.create()
+ldl.register(registry)                 // or: ldl.register(registry, { packageDir })
+
+const html = await convert(source, {
+  extension_registry: registry,
+  safe: 'safe',
+})
+----
+
+Images are written under `imagesdir` (or `imagesoutdir`) exactly as the gem
+does, with identical content-hash file names and digest-sidecar caching.
+
+=== Command line
+
+[source,console]
+----
+$ npx asciidoctor -r @openpowershift/asciidoctor-ldl document.adoc
+----
+
+=== Browser
+
+A browser build is exported at `@openpowershift/asciidoctor-ldl/browser`. It
+renders *SVG only* (PNG needs a native rasteriser) and embeds the diagram
+*inline*; your bundler or import map must provide
+`@openpowershift/logic-diagram-language`.
+
+[source,js]
+----
+import { Extensions, convert } from '@asciidoctor/core'
+import ldl from '@openpowershift/asciidoctor-ldl/browser'
+
+const registry = Extensions.create()
+ldl.register(registry)
+const html = await convert(source, { extension_registry: registry })
+----
+
+=== Asciidoctor VS Code
+
+The https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode[AsciiDoc]
+extension loads Asciidoctor.js extensions from `.asciidoctor/lib/**/*.js` in the
+workspace. Add a registration file that hands the registry to this extension:
+
+[source,js]
+.<workspace>/.asciidoctor/lib/ldl.js
+----
+const ldl = require('@openpowershift/asciidoctor-ldl')
+module.exports = function (registry) {
+  ldl.register(registry)
+  return registry
+}
+----
+
+Install the packages in the workspace so they resolve, then reload the window:
+
+[source,console]
+----
+$ npm install @openpowershift/asciidoctor-ldl @openpowershift/logic-diagram-language
+$ npm install @resvg/resvg-js        # for PNG previews
+----
+
+`[ldl]` blocks and `ldl::` macros then render in the live preview. This needs a
+build of Asciidoctor.js that supports asynchronous extensions (Asciidoctor.js 4);
+older bundled versions may not render the diagrams.
 
 == Attributes
 
@@ -379,26 +479,42 @@ $ asciidoctor-pdf  -r asciidoctor-ldl protection-scheme.adoc
 
 == Development
 
+The repository holds both implementations, sharing one rendering core
+(`lib/asciidoctor/ldl/js/render-core.mjs`):
+
+* the Ruby gem (`lib/`, `test/`), and
+* the Asciidoctor.js extension (`js/`, TypeScript, bundled with esbuild).
+
 [source,console]
 ----
+# Ruby gem
 $ bundle install
 $ (cd test/js && npm install)     # LDL package + resvg for the test suite
 $ bundle exec rake test           # Ruby unit + end-to-end tests
 $ bundle exec rake jstest         # Node helper tests
+
+# Asciidoctor.js extension
+$ (cd js && npm install)
+$ (cd js && npm run build)        # single bundled file per target → js/dist
+$ (cd js && npm test)             # extension + Ruby↔JS parity tests
 ----
 
-The Ruby end-to-end tests convert real AsciiDoc through Asciidoctor and assert on
-the generated files, roles and markup. They resolve the npm package from
-`test/js` (or `LDL_PACKAGE_DIR`) and skip cleanly if Node or the package is
-unavailable.
+The parity suite (`js/test/parity.test.mjs`) renders identical LDL through the
+Ruby CLI and the JS extension and asserts the generated files are byte-identical;
+it self-skips when the Ruby toolchain is absent.
 
 == Releasing
 
-Releases publish to RubyGems via https://guides.rubygems.org/trusted-publishing/[Trusted
-Publishing] (OIDC) — no API key is stored in the repository. Push a version tag
-(`git tag v0.1.0 && git push origin v0.1.0`) and the `Release` workflow builds,
-tests and publishes the gem. Configure the trusted publisher once on RubyGems to
-match `.github/workflows/release.yml`.
+Gem and npm package are versioned in *lockstep*: one `v<x.y.z>` tag releases both.
+
+* *RubyGems* via https://guides.rubygems.org/trusted-publishing/[Trusted
+  Publishing] (OIDC) — `.github/workflows/release.yml`.
+* *npm* (`@openpowershift/asciidoctor-ldl`) via npm Trusted Publishing (OIDC,
+  with provenance) — `.github/workflows/release-npm.yml`.
+
+Push a version tag (`git tag v0.2.0 && git push origin v0.2.0`) and both
+workflows build, test and publish. Configure the trusted publisher once on each
+of RubyGems and npm to match the respective workflow filename.
 
 == License
 

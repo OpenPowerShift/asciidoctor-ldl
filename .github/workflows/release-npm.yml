@@ -1,0 +1,47 @@
+name: Release npm
+
+# Publishes @openpowershift/asciidoctor-ldl to npm using Trusted Publishing
+# (OIDC) — no long-lived npm token is stored. Configure the trusted publisher
+# once on npmjs.com for the package to match this repo + workflow filename.
+# Fires on the same version tag as the gem release, keeping the two in lockstep.
+#
+#   git tag v0.2.0 && git push origin v0.2.0
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # OIDC token for npm trusted publishing + provenance
+
+defaults:
+  run:
+    working-directory: js
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing needs a recent npm.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - run: npm ci
+      - run: npm run build
+
+      # Run the extension tests before publishing (parity tests self-skip here,
+      # since the Ruby toolchain is not installed in this job).
+      - run: npm test
+
+      - name: Publish to npm (provenance via OIDC)
+        run: npm publish --provenance --access public

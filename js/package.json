@@ -1,0 +1,74 @@
+{
+  "name": "@openpowershift/asciidoctor-ldl",
+  "version": "0.2.0",
+  "description": "Asciidoctor.js extension rendering OpenPowerShift LDL logic diagrams to SVG/PNG",
+  "keywords": [
+    "asciidoctor",
+    "asciidoctorjs",
+    "asciidoctor-extension",
+    "logic-diagram",
+    "ldl",
+    "protection-relay",
+    "svg"
+  ],
+  "license": "MIT",
+  "author": "Daniel Mulholland",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenPowerShift/asciidoctor-ldl.git",
+    "directory": "js"
+  },
+  "homepage": "https://github.com/OpenPowerShift/asciidoctor-ldl#readme",
+  "bugs": "https://github.com/OpenPowerShift/asciidoctor-ldl/issues",
+  "type": "module",
+  "main": "./dist/node/index.cjs",
+  "module": "./dist/node/index.js",
+  "types": "./dist/types/node.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/node.d.ts",
+      "browser": "./dist/browser/index.js",
+      "import": "./dist/node/index.js",
+      "require": "./dist/node/index.cjs"
+    },
+    "./browser": {
+      "types": "./dist/types/browser.d.ts",
+      "default": "./dist/browser/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && node build.mjs",
+    "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@openpowershift/logic-diagram-language": "^0.2.8"
+  },
+  "optionalDependencies": {
+    "@resvg/resvg-js": "^2.6.0"
+  },
+  "peerDependencies": {
+    "@asciidoctor/core": ">=4.0.0 <5.0.0"
+  },
+  "devDependencies": {
+    "@asciidoctor/core": "^4.0.5",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  }
+}

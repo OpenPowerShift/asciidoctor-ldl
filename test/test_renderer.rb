@@ -32,6 +32,15 @@ class RendererTest < Minitest::Test
     assert_in_delta 2.5, Asciidoctor::Ldl::Renderer.new(scale: '2.5').scale
   end
 
+  def test_non_integer_scale_digest_does_not_raise
+    # Exercises digest -> canonical_scale (sprintf path); guards against the
+    # `format` attr_reader shadowing Kernel#format.
+    r = Asciidoctor::Ldl::Renderer.new(scale: 1.5)
+    assert_match(/\Aldl-[0-9a-f]{16}\.svg\z/, r.target_filename('O1 = I1'))
+    assert_equal '1.5', r.send(:canonical_scale, 1.5)
+    assert_equal '2', r.send(:canonical_scale, 2.0)
+  end
+
   def test_content_addressed_filename_is_stable_and_option_sensitive
     a = Asciidoctor::Ldl::Renderer.new(format: 'svg')
     b = Asciidoctor::Ldl::Renderer.new(format: 'png')

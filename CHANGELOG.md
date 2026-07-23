@@ -6,6 +6,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-23
+
+### Added
+
+- **Asciidoctor.js extension**, published to npm as
+  `@openpowershift/asciidoctor-ldl`. It registers the same `[ldl]` block and
+  `ldl::` macro, honours the same attributes, and emits the same roles as the
+  Ruby gem. In Node it writes SVG/PNG files with identical content-hash names;
+  in the browser it embeds SVG inline. Ships as a single bundled JS file
+  (Node ESM + CJS and a browser build) with TypeScript declarations.
+- A shared, environment-agnostic rendering core (`render-core.mjs`) used by both
+  the gem's Node helper and the npm extension, so Ruby and JavaScript produce
+  **byte-identical** SVG and identical file names. A parity test suite asserts
+  this across formats, scale, theme, labels and font options.
+
+### Changed
+
+- The content-hash used for output file names now uses a canonical, cross-tool
+  serialization (this changes generated file names from earlier versions; output
+  content is unchanged aside from the name).
+- Gem and npm package versions are released in lockstep from a single tag.
+
 ## [0.1.2] - 2026-07-23
 
 ### Added
@@ -46,7 +68,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Content-addressed caching with a digest sidecar so unchanged diagrams are not
   re-rendered.
 
-[Unreleased]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/OpenPowerShift/asciidoctor-ldl/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/OpenPowerShift/asciidoctor-ldl/releases/tag/v0.1.0

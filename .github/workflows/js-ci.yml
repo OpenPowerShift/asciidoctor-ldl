@@ -1,0 +1,58 @@
+name: JS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: js
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+  parity:
+    name: Ruby ↔ JS parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Install the asciidoctor-ldl gem from source
+        working-directory: .
+        run: |
+          gem install asciidoctor --no-document
+          gem build asciidoctor-ldl.gemspec
+          gem install ./asciidoctor-ldl-*.gem --no-document
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - run: npm ci
+      - run: npm run build
+      # The parity suite renders identical LDL through the Ruby CLI and the JS
+      # extension and asserts byte-identical files.
+      - run: node --test test/parity.test.mjs
