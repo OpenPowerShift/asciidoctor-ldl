@@ -78,9 +78,17 @@ module Asciidoctor
         (images_dir && !images_dir.to_s.empty?) ? File.join(base, images_dir) : base
       end
 
+      # Image attributes passed straight through to the generated image block.
+      # Includes the sizing attributes for every backend: +width+ (HTML),
+      # +pdfwidth+/+scaledwidth+ (asciidoctor-pdf).
+      IMAGE_PASSTHROUGH = %w[
+        alt title width height pdfwidth scaledwidth align float id link
+        window opts fit
+      ].freeze
+
       def create_ldl_image(parent, attrs, filename, renderer, _doc)
         image_attrs = { 'target' => filename }
-        %w[alt title width height align float id link].each do |key|
+        IMAGE_PASSTHROUGH.each do |key|
           image_attrs[key] = attrs[key] if attrs.key?(key)
         end
         image_attrs['alt'] ||= (attrs['target'] || 'LDL logic diagram')

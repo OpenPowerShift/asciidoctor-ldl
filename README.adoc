@@ -204,8 +204,18 @@ header or on the command line (`-a ldl-format=png`).
 | Set to `false` to always re-render, ignoring the cache.
 |===
 
-Standard image attributes — `alt`, `title`, `width`, `height`, `align`,
-`float`, `id`, `link`, `role` — pass straight through to the generated image.
+Standard image attributes — `alt`, `title`, `width`, `height`, `pdfwidth`,
+`scaledwidth`, `align`, `float`, `id`, `link`, `role` — pass straight through to
+the generated image. To control the rendered size, use `width` for HTML and
+`pdfwidth` (or `scaledwidth`) for `asciidoctor-pdf`, e.g.:
+
+[source]
+----
+ldl::diagrams/trip.ldl[pdfwidth=80%]
+----
+
+Without a sizing attribute, a diagram renders at its intrinsic size and
+`asciidoctor-pdf` scales an over-wide one down to the content width.
 
 TIP: Most *diagram* styling (inversion bubbles vs NOT gates, input bars,
 compactness, stroke width, margins, …) is authored in the LDL source itself with

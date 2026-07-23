@@ -88,6 +88,24 @@ class ExtensionTest < Minitest::Test
     assert File.file?(File.join(images, 'trip.svg'))
   end
 
+  def test_sizing_attributes_pass_through_to_image
+    skip_unless_renderable
+    doc = Asciidoctor.load(<<~ADOC, safe: :unsafe, base_dir: @tmp,
+      [ldl,sized,svg,pdfwidth=80%,scaledwidth=6cm,width=300]
+      ----
+      O1 = A AND B
+      ----
+    ADOC
+                           attributes: { 'ldl-package-dir' => ldl_package_dir,
+                                          'outdir' => @tmp, 'imagesdir' => 'images' })
+    img = doc.find_by(context: :image).first
+    refute_nil img, 'expected an image block'
+    assert_equal '80%', img.attr('pdfwidth')
+    assert_equal '6cm', img.attr('scaledwidth')
+    assert_equal '300', img.attr('width')
+    assert_includes img.attr('role'), 'ldl'
+  end
+
   def test_invalid_source_produces_error_block_not_crash
     html = nil
     # The extension warns to stderr on a bad diagram (desirable in real use);
