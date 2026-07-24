@@ -1,0 +1,127 @@
+= Releasing
+:idprefix:
+:idseparator: -
+:toc: macro
+:toclevels: 2
+
+`asciidoctor-ldl` ships as *two packages from one repository*, released together
+in *lockstep* under a single version:
+
+[cols="1,1,2",options="header"]
+|===
+| Package | Registry | Trusted publishing
+
+| `asciidoctor-ldl` (gem)
+| https://rubygems.org/gems/asciidoctor-ldl[RubyGems]
+| OIDC, no API key
+
+| `@openpowershift/asciidoctor-ldl` (npm)
+| https://www.npmjs.com/package/@openpowershift/asciidoctor-ldl[npm]
+| OIDC + provenance, no token
+|===
+
+One `vX.Y.Z` tag releases both. Keeping the versions equal is required — the
+generated diagram file names embed the version, so a mismatch would break the
+byte-for-byte parity between the Ruby and JavaScript output.
+
+toc::[]
+
+== Automated releases (release-please)
+
+Releases are driven by https://github.com/googleapis/release-please[release-please]
+and https://www.conventionalcommits.org/[Conventional Commits]. You never edit
+version numbers or the changelog by hand.
+
+. *Commit with conventional messages* to `main` (`feat:`, `fix:`, `fix(deps):`,
+  `chore:`, `ci:`, `docs:`, …). `feat:` bumps the minor, `fix:`/`fix(deps):` the
+  patch (pre-1.0: see `bump-*-pre-major` in `release-please-config.json`).
+. *release-please opens/updates a "release PR"* that bumps the version in
+  `lib/asciidoctor/ldl/version.rb`, `js/package.json` and `js/package-lock.json`,
+  and rolls the commits into `CHANGELOG.md`.
+. *Merge the release PR.* release-please then tags `vX.Y.Z` and creates the
+  GitHub Release.
+. The same `Release` workflow run publishes, gated on `release_created`:
++
+* *gem* → RubyGems (trusted publishing) + attaches `asciidoctor-ldl-<v>.gem`;
+* *npm* → npm (trusted publishing, provenance) + attaches the npm tarball and
+  `asciidoctor-ldl-standalone.js` (the self-contained VS Code drop-in).
+
+Everything lives in `.github/workflows/release.yml` (config:
+`release-please-config.json`, `.release-please-manifest.json`).
+
+=== One-time trusted-publisher setup
+
+Both publishers key off *this workflow file* (`release.yml`) and the `release`
+environment. Configure each once:
+
+* *RubyGems* → gem settings → Trusted Publishers: repo
+  `OpenPowerShift/asciidoctor-ldl`, workflow `release.yml`, environment `release`.
+* *npm* → package → Settings → Trusted Publisher → GitHub Actions: org
+  `OpenPowerShift`, repo `asciidoctor-ldl`, workflow *`release.yml`*, environment
+  `release`.
+
+[IMPORTANT]
+====
+If you previously configured the npm trusted publisher for `release-npm.yml`
+(now removed), update it to *`release.yml`*, or the automated npm publish will be
+rejected.
+====
+
+== Updating the LDL renderer
+
+The npm package depends on the renderer,
+`@openpowershift/logic-diagram-language`; the gem resolves it at the user's build
+time, so the gem itself is not pinned to a renderer version.
+
+*Automated:* Dependabot (`.github/dependabot.yml`) opens a weekly PR for the
+renderer (and resvg) titled `fix(deps): …`. To ship it:
+
+. Merge the Dependabot PR (CI + parity tests run on it).
+. Merge the release PR release-please opens in response.
+
+*Manual:*
+
+[source,console]
+----
+$ cd js && npm install @openpowershift/logic-diagram-language@latest
+$ npm test                       # extension + Ruby↔JS parity
+$ (cd ../test/js && npm install @openpowershift/logic-diagram-language@latest)
+$ git commit -am "fix(deps): update logic-diagram-language to <version>"
+----
+
+Then push to `main` and let release-please cut the release.
+
+NOTE: The https://github.com/danyill/asciidoctor-pdf-ldl-demo[demo repo] pins the
+renderer separately; bump it there too if you want the demo on the newest one.
+
+== Manual / fallback release
+
+If you ever need to bypass release-please (hotfix, tooling outage): a pushed
+`vX.Y.Z` tag does *not* trigger publishing in this setup — publishing is gated on
+release-please's `release_created`. To release by hand, bump
+`lib/asciidoctor/ldl/version.rb` and `js/package.json` (keep them equal), update
+`CHANGELOG.md` and `.release-please-manifest.json`, commit, then either let
+release-please pick it up or publish directly:
+
+[source,console]
+----
+# gem
+$ gem build asciidoctor-ldl.gemspec && gem push asciidoctor-ldl-<v>.gem
+# npm (from js/)
+$ cd js && npm run build && npm publish --access public
+----
+
+Direct pushes need registry credentials (an API key / `npm login` with OTP),
+whereas the CI path uses trusted publishing with no stored secrets.
+
+== Version parity check
+
+Gem and npm versions must match. Quick check:
+
+[source,console]
+----
+$ ruby -r./lib/asciidoctor/ldl/version -e 'puts Asciidoctor::Ldl::VERSION'
+$ node -p "require('./js/package.json').version"
+----
+
+They should print the same value; the release-please PR keeps them in sync.

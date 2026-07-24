@@ -517,16 +517,17 @@ it self-skips when the Ruby toolchain is absent.
 
 == Releasing
 
-Gem and npm package are versioned in *lockstep*: one `v<x.y.z>` tag releases both.
+Gem and npm package are versioned in *lockstep* and released together by
+https://github.com/googleapis/release-please[release-please]: Conventional-Commit
+pushes to `main` maintain a release PR; merging it tags `vX.Y.Z`, then the
+`Release` workflow publishes the gem (RubyGems) and npm package — both via
+https://guides.rubygems.org/trusted-publishing/[Trusted Publishing] (OIDC, no
+stored secrets) — and attaches the gem, npm tarball and standalone build to the
+GitHub Release.
 
-* *RubyGems* via https://guides.rubygems.org/trusted-publishing/[Trusted
-  Publishing] (OIDC) — `.github/workflows/release.yml`.
-* *npm* (`@openpowershift/asciidoctor-ldl`) via npm Trusted Publishing (OIDC,
-  with provenance) — `.github/workflows/release-npm.yml`.
-
-Push a version tag (`git tag v0.2.0 && git push origin v0.2.0`) and both
-workflows build, test and publish. Configure the trusted publisher once on each
-of RubyGems and npm to match the respective workflow filename.
+Updating the bundled LDL renderer is automated with Dependabot. See
+link:RELEASING.adoc[RELEASING.adoc] for the full process, trusted-publisher
+setup, and renderer-update steps.
 
 == License
 

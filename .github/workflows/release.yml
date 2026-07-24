@@ -1,26 +1,48 @@
 name: Release
 
-# Publishes the gem to RubyGems using Trusted Publishing (OIDC) — no long-lived
-# API key is stored in the repository. Configure the trusted publisher once at
-# https://rubygems.org/gems/asciidoctor-ldl/trusted_publishers to match this
-# workflow (repository + workflow filename + environment).
+# Automated releases with release-please. Pushing Conventional-Commit changes to
+# main maintains a "release PR" that bumps the version (gem + npm in lockstep)
+# and updates the changelog. Merging that PR tags the release (vX.Y.Z), creates
+# the GitHub Release, and — via the gated jobs below — publishes the gem and the
+# npm package with Trusted Publishing (OIDC), then attaches the build artifacts.
 #
-# Cut a release by pushing a version tag, e.g.:
-#   git tag v0.1.0 && git push origin v0.1.0
+# Trusted publishers to configure once (both keyed to THIS workflow file):
+#   * RubyGems: repo + workflow `release.yml` + environment `release`
+#   * npm:      repo + workflow `release.yml` + environment `release`
 
 on:
   push:
-    tags: ['v*']
-  workflow_dispatch:
+    branches: [main]
 
-permissions:
-  contents: write   # create the GitHub release
-  id-token: write   # mint the OIDC token for trusted publishing
+# Serialise release runs so concurrent pushes can't race the release-PR branch.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Uses release-please-config.json + .release-please-manifest.json.
+
+  publish-gem:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      contents: write   # upload release assets
+      id-token: write   # OIDC for RubyGems trusted publishing
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +52,6 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
-      # Runs the tests before anything is published.
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -43,22 +64,59 @@ jobs:
           LDL_PACKAGE_DIR: ${{ github.workspace }}/test/js
         run: bundle exec rake test
 
-      # Builds and pushes the gem to RubyGems via trusted publishing (with
-      # attestations). Does not create a GitHub Release — that is the next step.
-      # await-release is disabled: the post-push index-propagation poll can lag
-      # past its timeout and fail the job even though the gem published fine.
+      # Builds and pushes the gem via trusted publishing (with attestations).
+      # await-release is off: the post-push index poll can lag past its timeout.
       - name: Publish to RubyGems
         uses: rubygems/release-gem@v1
         with:
           await-release: false
 
-      # Publish a matching GitHub Release with the built gem attached. Creation
-      # is idempotent (the parallel npm workflow may create it first), then the
-      # gem is uploaded as a release asset.
       - name: Attach gem to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" pkg/*.gem --clobber
+
+  publish-npm:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write   # upload release assets
+      id-token: write   # OIDC for npm trusted publishing + provenance
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Update npm
+        run: npm install -g npm@latest   # trusted publishing needs npm >= 11.5.1
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      - name: Publish to npm (provenance via OIDC)
         run: |
-          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
-            --title "${GITHUB_REF_NAME}" --generate-notes || true
-          gh release upload "${GITHUB_REF_NAME}" pkg/*.gem --clobber
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION is already published; skipping publish."
+          else
+            npm publish --provenance --access public
+          fi
+
+      # Attach the npm tarball and the self-contained standalone build (renderer
+      # bundled in — drop into Asciidoctor VS Code's .asciidoctor/lib) to the
+      # GitHub Release.
+      - name: Attach npm tarball and standalone to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TARBALL="$(npm pack --silent)"
+          cp dist/standalone/asciidoctor-ldl.cjs asciidoctor-ldl-standalone.js
+          gh release upload "${{ needs.release-please.outputs.tag_name }}" \
+            "$TARBALL" asciidoctor-ldl-standalone.js --clobber
