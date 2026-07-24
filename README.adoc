@@ -529,6 +529,13 @@ Updating the bundled LDL renderer is automated with Dependabot. See
 link:RELEASING.adoc[RELEASING.adoc] for the full process, trusted-publisher
 setup, and renderer-update steps.
 
+== Contributing
+
+Contributions are welcome — see link:CONTRIBUTING.adoc[CONTRIBUTING.adoc] for the
+repository layout, how to run the Ruby and JavaScript test suites (including the
+Ruby↔JS parity checks), and the Conventional-Commit convention that drives
+releases.
+
 == License
 
 MIT © Daniel Mulholland. See link:LICENSE[].

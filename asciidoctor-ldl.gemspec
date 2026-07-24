@@ -37,6 +37,7 @@ Gem::Specification.new do |spec|
     'lib/**/*.mjs',
     'README.adoc',
     'RELEASING.adoc',
+    'CONTRIBUTING.adoc',
     'CHANGELOG.md',
     'LICENSE'
   ]

@@ -1,0 +1,146 @@
+= Contributing
+:idprefix:
+:idseparator: -
+:toc: macro
+:toclevels: 2
+
+Thanks for helping improve `asciidoctor-ldl`. This project renders
+https://github.com/OpenPowerShift/logic-diagram-language[Logic Diagram Language]
+diagrams in AsciiDoc, and ships as *two packages from one repository* that must
+produce *identical output*:
+
+* the Ruby gem `asciidoctor-ldl` (`lib/`, `test/`), and
+* the Asciidoctor.js extension `@openpowershift/asciidoctor-ldl` (`js/`).
+
+Both drive a single rendering core, `lib/asciidoctor/ldl/js/render-core.mjs`, so
+a diagram and its options render byte-for-byte the same from either side.
+
+toc::[]
+
+== Repository layout
+
+[cols="1m,3",options="header"]
+|===
+| Path | What it is
+
+| lib/asciidoctor/ldl/*.rb
+| The Ruby gem: extension (block + macro), renderer, version.
+
+| lib/asciidoctor/ldl/js/render-core.mjs
+| *Shared* environment-agnostic rendering core (parse → font rewrite → scale).
+  Plain JS so the gem runs it directly; also bundled into the npm package.
+
+| lib/asciidoctor/ldl/js/node-loader.mjs, ldl_render.mjs
+| Node module resolution + PNG rasterisation, and the gem's CLI helper.
+
+| js/
+| The Asciidoctor.js extension (TypeScript, bundled with esbuild).
+
+| test/
+| Ruby tests (unit + end-to-end). js/test/ holds the JS + parity tests.
+|===
+
+== Development setup
+
+Ruby (works on 2.5+) and Node 18+ are required.
+
+[source,console]
+----
+# Ruby gem
+$ bundle install
+$ (cd test/js && npm install)     # LDL renderer + resvg for the tests
+
+# Asciidoctor.js extension
+$ (cd js && npm install)
+----
+
+== Running the tests
+
+[source,console]
+----
+# Ruby: unit + end-to-end (converts real AsciiDoc through Asciidoctor)
+$ bundle exec rake test
+$ bundle exec rake jstest         # the Node helper tests
+
+# JavaScript: extension, standalone, and Ruby↔JS parity
+$ (cd js && npm run build && npm test)
+$ (cd js && npm run typecheck)
+----
+
+The *parity* suite (`js/test/parity.test.mjs`) renders the same LDL through the
+Ruby CLI and the JS extension and asserts the generated files are byte-identical.
+It self-skips if the Ruby toolchain is absent. Please keep it green.
+
+== Keeping the two implementations in lockstep
+
+Because the Ruby and JavaScript integrations must render identically:
+
+* Put *rendering* logic in the shared `render-core.mjs`, not in one side only.
+* Anything that feeds the output file name (the content digest) must match on
+  both sides — `render-core.mjs` `digestMaterial` and the Ruby `Renderer#digest`
+  / `canonical_scale`. If you change one, change the other and run the parity
+  suite.
+* New attributes should be wired the same way in `js/src/attributes.ts` and
+  `lib/asciidoctor/ldl/extension.rb`, with the same precedence and defaults.
+
+== Commit messages (Conventional Commits)
+
+Releases are automated with https://github.com/googleapis/release-please[release-please],
+which reads https://www.conventionalcommits.org/[Conventional Commits] on `main`.
+*Use them* — they decide the next version and the changelog.
+
+[cols="1m,2,1",options="header"]
+|===
+| Type | Use for | Release effect
+
+| feat
+| a new user-facing capability
+| minor bump
+
+| fix
+| a bug fix
+| patch bump
+
+| fix(deps)
+| updating a runtime dependency (e.g. the LDL renderer)
+| patch bump
+
+| docs, ci, chore, test, refactor, build, style
+| non-shipping changes
+| no release
+|===
+
+A breaking change — `feat!:` / `fix!:` or a `BREAKING CHANGE:` footer — forces a
+major bump (a minor while pre-1.0). Example:
+
+----
+feat: add a `strokeWidth` attribute
+
+Forwards OPTION STROKE_WIDTH as a block attribute in both the gem and the
+Asciidoctor.js extension.
+----
+
+Keep the subject in the imperative mood and ~50 characters; explain the *why* in
+the body.
+
+== Pull requests
+
+. Branch from `main`.
+. Add or update tests (including parity where output can change).
+. Run the Ruby and JS test suites locally.
+. Use Conventional-Commit messages (see above).
+. Open the PR; CI runs the Ruby matrix, the JS matrix and the parity job.
+
+Maintainers merge with a conventional title so release-please can roll the change
+into the next release PR. You do not bump versions or edit `CHANGELOG.md` — that
+is automated.
+
+== Releasing
+
+Maintainers only — see link:RELEASING.adoc[RELEASING.adoc] for the release-please
+flow, trusted-publisher setup, and how to update the bundled LDL renderer.
+
+== License
+
+By contributing, you agree that your contributions are licensed under the
+project's link:LICENSE[MIT license].
